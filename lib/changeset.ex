@@ -6,6 +6,18 @@ defmodule Formex.Ecto.Changeset do
   alias Formex.FormNested
   @repo Application.get_env(:formex, :repo)
 
+  import Ecto.DateTime, only: [utc: 0]
+  import Ecto.Queryable, only: [to_query: 1]
+
+  defp schema_fields(%{from: {_source, schema}}) when schema != nil, do: schema.__schema__(:fields)
+
+  defp field_exists?(queryable, column) do
+    query = to_query(queryable)
+    fields = schema_fields(query)
+
+    Enum.member?(fields, column)
+  end
+
   @spec create_changeset(form :: Form.t()) :: Form.t()
   def create_changeset(form) do
     form.struct
@@ -117,7 +129,11 @@ defmodule Formex.Ecto.Changeset do
                     |> cast(subform.mapped_params, [item.delete_field])
 
                   if get_change(changeset, item.delete_field) do
-                    %{changeset | action: :delete}
+                    if field_exists?(item.struct_module, :deleted_at) do
+                      change(changeset, %{deleted_at: utc()})
+                    else
+                      %{changeset | action: :delete}
+                    end
                   else
                     changeset
                   end

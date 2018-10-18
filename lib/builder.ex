@@ -62,6 +62,14 @@ defimpl Formex.BuilderProtocol, for: Formex.BuilderType.Ecto do
 
   #
 
+  defp apply_query(query, custom_query) when is_function(custom_query) do
+    custom_query.(query)
+  end
+
+  defp apply_query(query, _) do
+    query
+  end
+
   defp preload_assocs(form) do
     # TODO - creating a new struct for nested when it is nil,
     # or handle that empty form and do not displaying it
@@ -79,9 +87,13 @@ defimpl Formex.BuilderProtocol, for: Formex.BuilderType.Ecto do
       if is_assoc(form, item.name) do
         queryable = struct.__struct__.__schema__(:association, item.name).queryable
 
+        query = Ecto.Query.from(e in queryable, order_by: e.id)
+
+        query = apply_query(query, item.opts[:query])
+
         struct
         |> @repo.preload([
-          {item.name, Ecto.Query.from(e in queryable, order_by: e.id)}
+          {item.name, query}
         ])
       else
         struct
