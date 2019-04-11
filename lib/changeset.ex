@@ -7,10 +7,10 @@ defmodule Formex.Ecto.Changeset do
   import Formex.Ecto.Utils
   @repo Application.get_env(:formex, :repo)
 
-  import Ecto.DateTime, only: [utc: 0]
+  import DateTime, only: [utc_now: 0, truncate: 2]
   import Ecto.Queryable, only: [to_query: 1]
 
-  defp schema_fields(%{from: {_source, schema}}) when schema != nil, do: schema.__schema__(:fields)
+  defp schema_fields(%{from: %Ecto.Query.FromExpr{source: {_source, schema}}}) when schema != nil, do: schema.__schema__(:fields)
 
   defp field_exists?(queryable, column) do
     query = to_query(queryable)
@@ -158,7 +158,7 @@ defmodule Formex.Ecto.Changeset do
 
             if get_change(changeset, item.delete_field) do
               if field_exists?(item.struct_module, :deleted_at) do
-                change(changeset, %{deleted_at: utc()})
+                change(changeset, %{deleted_at: truncate(utc_now(), :second)})
               else
                 %{changeset | action: :delete}
               end
